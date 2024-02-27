@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watch Service Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Open Sans', 'sans-serif'],
+        },
+      },
+    },
+  }
+</script>
+<style>
+  .progress-bar {
+    height: 1.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    transition: width 0.4s ease;
+  }
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-4xl font-bold text-center mb-8">WATCH SERVICE TRACKER</h1>
+  
+  <div class="flex justify-between items-center mb-4">
+    <button id="decrementDay" class="bg-blue-500 text-white px-4 py-2 rounded">-</button>
+    <div>
+      <div id="daysWorked" class="text-center font-semibold">1</div>
+      <div class="text-center text-sm">Days worked</div>
+    </div>
+    <button id="incrementDay" class="bg-blue-500 text-white px-4 py-2 rounded">+</button>
+  </div>
+  
+  <div class="flex justify-between items-center mb-8">
+    <div>
+      <div id="monthlyHours" class="text-center font-semibold">7.5hours</div>
+      <div class="text-center text-sm">Monthly working hours</div>
+    </div>
+  </div>
+  
+  <div class="mb-8">
+    <label for="serviceSelect" class="block mb-2 text-lg font-medium">Select a service</label>
+    <select id="serviceSelect" class="block w-full p-2 mb-4 bg-white border border-gray-300 rounded">
+      <option value="E15">E15</option>
+      <option value="Other QZ">Other QZ</option>
+      <option value="Manual Winding">Manual Winding</option>
+      <option value="Automatic">Automatic</option>
+      <option value="Partial OH1">Partial OH1</option>
+      <option value="Partial OH2">Partial OH2</option>
+      <option value="EM">EM</option>
+      <option value="Unproductive time">Unproductive time</option>
+    </select>
+    <button id="addService" class="bg-green-500 text-white px-4 py-2 rounded mr-2">ADD</button>
+    <button id="removeService" class="bg-red-500 text-white px-4 py-2 rounded">REMOVE</button>
+  </div>
+  
+  <div class="mb-8">
+    <div id="totalHours" class="text-lg font-medium mb-2">Total hours: 0</div>
+    <div id="serviceList" class="text-sm"></div>
+  </div>
+  
+  <div class="mb-8">
+    <button id="resetButton" class="bg-yellow-500 text-white px-4 py-2 rounded">RESET</button>
+  </div>
+  
+  <div class="mb-8">
+    <h2 class="text-2xl font-bold mb-2">Monthly progress tracking</h2>
+    <div class="progress-bar">
+      <div id="progressBarInner" class="progress-bar-inner bg-red-500" style="width: 0%"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const serviceTimes = {
+    'E15': 2.5,
+    'Other QZ': 3,
+    'Manual Winding': 5,
+    'Automatic': 6.5,
+    'Partial OH1': 1,
+    'Partial OH2': 2,
+    'EM': 0.5,
+    'Unproductive time': 1
+  };
+  
+  let daysWorked = 1;
+  let totalHours = 0;
+  let servicesAdded = {};
+  
+  const daysWorkedEl = document.getElementById('daysWorked');
+  const monthlyHoursEl = document.getElementById('monthlyHours');
+  const serviceSelectEl = document.getElementById('serviceSelect');
+  const totalHoursEl = document.getElementById('totalHours');
+  const serviceListEl = document.getElementById('serviceList');
+  const progressBarInnerEl = document.getElementById('progressBarInner');
+
+  // Load data from localStorage
+  function loadData() {
+    daysWorked = localStorage.getItem('daysWorked') ? parseInt(localStorage.getItem('daysWorked')) : 1;
+    totalHours = localStorage.getItem('totalHours') ? parseFloat(localStorage.getItem('totalHours')) : 0;
+    servicesAdded = localStorage.getItem('servicesAdded') ? JSON.parse(localStorage.getItem('servicesAdded')) : {};
+    daysWorkedEl.textContent = daysWorked;
+    monthlyHoursEl.textContent = (daysWorked * 7.5).toFixed(1) + 'hours';
+    totalHoursEl.textContent = 'Total hours: ' + totalHours.toFixed(1);
+    updateServiceList();
+    updateProgressBar();
+  }
+
+  function saveData() {
+    localStorage.setItem('daysWorked', daysWorked);
+    localStorage.setItem('totalHours', totalHours);
+    localStorage.setItem('servicesAdded', JSON.stringify(servicesAdded));
+  }
+  
+  function updateDaysWorked(increment) {
+    daysWorked = increment ? daysWorked + 1 : daysWorked - 1;
+    if (daysWorked < 1) daysWorked = 1;
+    daysWorkedEl.textContent = daysWorked;
+    monthlyHoursEl.textContent = (daysWorked * 7.5).toFixed(1) + 'hours';
+    saveData();
+    updateProgressBar();
+  }
+  
+  function updateServiceList() {
+    serviceListEl.innerHTML = '';
+    for (const [service, count] of Object.entries(servicesAdded)) {
+      serviceListEl.innerHTML += `"${service}": ${count} added<br>`;
+    }
+  }
+  
+  function updateProgressBar() {
+    const percentage = (totalHours / (daysWorked * 7.5)) * 100;
+    progressBarInnerEl.style.width = `${percentage}%`;
+  }
+  
+  document.getElementById('incrementDay').addEventListener('click', () => updateDaysWorked(true));
+  document.getElementById('decrementDay').addEventListener('click', () => updateDaysWorked(false));
+  
+  document.getElementById('addService').addEventListener('click', () => {
+    const service = serviceSelectEl.value;
+    totalHours += serviceTimes[service];
+    servicesAdded[service] = (servicesAdded[service] || 0) + 1;
+    totalHoursEl.textContent = 'Total hours: ' + totalHours.toFixed(1);
+    updateServiceList();
+    saveData();
+    updateProgressBar();
+  });
+  
+  document.getElementById('removeService').addEventListener('click', () => {
+    const service = serviceSelectEl.value;
+    if (servicesAdded[service] && servicesAdded[service] > 0) {
+      servicesAdded[service] -= 1;
+      totalHours -= serviceTimes[service];
+      if (servicesAdded[service] === 0) delete servicesAdded[service];
+      totalHoursEl.textContent = 'Total hours: ' + totalHours.toFixed(1);
+      updateServiceList();
+      saveData();
+      updateProgressBar();
+    }
+  });
+  
+  document.getElementById('resetButton').addEventListener('click', () => {
+    daysWorked = 1;
+    totalHours = 0;
+    servicesAdded = {};
+    loadData();
+  });
+  
+  loadData();
+</script>
+</body>
+</html>
